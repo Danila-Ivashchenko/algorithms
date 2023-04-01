@@ -71,6 +71,8 @@ void test() {
 	mat1 *= mat2;
 	std::cout << mat1 ;
 
+	auto rand_mat = NDArray<int>::FillRandom({2, 2});
+	std::cout << rand_mat;
 }
 
 int main()

@@ -6,44 +6,45 @@
 
 template <typename T>
 class NDArray {
-	std::vector<T> values;
+	//std::vector<T> values;
+	T* values;
 	std::vector<int> shape;
     int size;
 public:
-    // 
+    // Конструктор
     NDArray(std::vector<int> nshape);
 
-    // 
+    // Заполнение матрицы нулями
     static NDArray FillZero(std::vector<int> shape);
 
-    // 
+    // Заполнение матрицы единицами
     static NDArray FillOne(std::vector<int> shape);
 
-    // 
-    static NDArray FillRandom(std::vector<int> shape, T max);
+    // Заполнение матрицы случайными числами
+    static NDArray FillRandom(std::vector<int> shape, T max = 100);
 
     // размер ndarray
     int GetSize();
 
-    // ��������� +
+    // Операторы +
     NDArray<T> operator +(T other);
     NDArray<T> operator +(NDArray<T> other);
     NDArray<T>* operator +=(T other);
     NDArray<T>* operator +=(NDArray<T> other);
 
-    // ��������� -
+    // Операторы -
     NDArray<T> operator -(T other);
     NDArray<T> operator -(NDArray<T> other);
     NDArray<T>* operator -=(T other);
     NDArray<T>* operator -=(NDArray<T> other);
 
-    // ��������� *
+    // Операторы *
     NDArray<T> operator *(T other);
     NDArray<T> operator *(NDArray<T> other);
     NDArray<T>* operator *=(T other);
     NDArray<T>* operator *=(NDArray<T> other);
 
-    // ��������� /
+    // Операторы /
     NDArray<T> operator /(T other);
     NDArray<T> operator /(NDArray<T> other);
     NDArray<T>* operator /=(T other);
@@ -56,10 +57,8 @@ public:
     T& operator[](const int index) { return values[index]; };
     T& operator[](std::vector<int> indexes);
 
-   friend std::ostream& operator<<(std::ostream& out, const NDArray& arr);
-
+	friend std::ostream& operator<<(std::ostream& out, const NDArray& arr);
 };
-
 
 
 template<typename T>
@@ -79,7 +78,7 @@ NDArray<T>::NDArray(std::vector<int> nshape) {
     for (auto num : nshape)
         new_size *= num;
     size = new_size;
-    values.resize(new_size);
+    values = new T[size];
 };
 
 
@@ -132,10 +131,10 @@ inline T& NDArray<T>::operator[](std::vector<int> indexes){
 }
 
 
-// ���. ���������
+// Математические операторы
 
 
-// +
+// Сложение
 template<typename T>
 NDArray<T> NDArray<T>::operator+(T other){
     auto copy = *this;
@@ -179,7 +178,7 @@ NDArray<T>* NDArray<T>::operator+=(NDArray<T> other){
     return this;
 }
 
-// -
+// Вычитание
 
 template<typename T>
 NDArray<T> NDArray<T>::operator-(T other){
@@ -217,7 +216,7 @@ NDArray<T>* NDArray<T>::operator-=(NDArray<T> other)
 }
 
 
-// +
+// Умножение
 template<typename T>
 NDArray<T> NDArray<T>::operator*(T other) {
     auto copy = *this;
@@ -262,7 +261,7 @@ NDArray<T>* NDArray<T>::operator*=(NDArray<T> other) {
     return this;
 }
 
-// /
+// Деление
 template<typename T>
 NDArray<T> NDArray<T>::operator/(T other) {
     auto copy = *this;
@@ -307,7 +306,7 @@ NDArray<T>* NDArray<T>::operator/=(NDArray<T> other) {
 }
 
 
-// ��������� ��������
+// Транспониравание матрицы
 
 template<typename T>
 NDArray<T> NDArray<T>::transpose(){
