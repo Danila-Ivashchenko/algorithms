@@ -1,6 +1,5 @@
 CC = g++
 CFLAGS = -std=c++20 -Wall -pedantic
-#SOURCES = main.cpp
 SOURCES = main.cpp
 CLASS = NDArray.h
 
@@ -15,12 +14,10 @@ else
 endif
 
 all:
-	$(CC) $(CFLAGS) $(CLASS) -o $(TARGET) $(SOURCES) 
+	$(CC) $(CFLAGS) $(SOURCES) $(CLASS) -o $(TARGET)
 
 clean:
-	echo $(OS)
-	$(RM) $(TARGET)
+	$(RM) $(SLASH)$(TARGET)
 
 run: all
-#	.\$(TARGET) | python .\main.py
 	$(SLASH)$(TARGET)

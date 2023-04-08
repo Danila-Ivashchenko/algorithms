@@ -15,7 +15,7 @@ void test() {
 	}
 
 	std::cout << arr1 << arr2 << "\n";
-
+	
 	auto new_arr = arr1 + 2;
 	std::cout << new_arr;
 	new_arr += 2;
