@@ -7,9 +7,11 @@ CLASS = NDArray.h
 ifeq ($(OS), Windows_NT)
 	RM = del
 	TARGET = main.exe
+	SLASH = .\
 else
 	RM = rm
 	TARGET = main
+	SLASH = ./
 endif
 
 all:
@@ -21,4 +23,4 @@ clean:
 
 run: all
 #	.\$(TARGET) | python .\main.py
-	.\$(TARGET)
+	$(SLASH)$(TARGET)
