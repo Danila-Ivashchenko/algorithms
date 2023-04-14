@@ -34,8 +34,8 @@ int get_digit(int num, int degree, int base = 10) {
     return num % base;
 }
 
-void msd_sort_work_int(std::vector<int> &arr, int base, int classes_count = 10, bool direction = true){
-    if (base < 0) {
+void msd_sort_work(std::vector<int> &arr, int base, int classes_count = 10, bool direction = true){
+    if (base < 0 || arr.size() <= 1) {
         return;
     }
     int n = arr.size();
@@ -56,7 +56,7 @@ void msd_sort_work_int(std::vector<int> &arr, int base, int classes_count = 10, 
 
     int index = 0;
     for (auto& sub_arr : digits) {
-        msd_sort_work_int(sub_arr, base - 1, classes_count, direction);
+        msd_sort_work(sub_arr, base - 1, classes_count, direction);
         for (auto num : sub_arr) {
             arr[index] = num;
             index++;
@@ -64,11 +64,7 @@ void msd_sort_work_int(std::vector<int> &arr, int base, int classes_count = 10, 
     }
 }
 
-// template <class T>
-// concept INT_STR = std::is_same_v<T, std::string> || std::is_same_v<T, int>;
-
-// template <INT_STR T>
-void msd_sort(std::vector<int>& arr, int classes_count = 10, bool direction = true) {
+void msd_sort(std::vector<int>& arr, bool direction = true, int classes_count = 10) {
     int max = 0, min = 0;
     std::vector<int> higher_zero;
     std::vector<int> below_zero;
@@ -87,8 +83,16 @@ void msd_sort(std::vector<int>& arr, int classes_count = 10, bool direction = tr
         }
     }
 
-    msd_sort_work_int(higher_zero, get_degree(max), classes_count, direction);
-    msd_sort_work_int(below_zero, get_degree(abs(min)), classes_count, !direction);
-    below_zero.insert(below_zero.end(), higher_zero.begin(), higher_zero.end());
-    arr = below_zero;
+    msd_sort_work(higher_zero, get_degree(max), classes_count, direction);
+    msd_sort_work(below_zero, get_degree(abs(min)), classes_count, !direction);
+	if (direction){
+		below_zero.insert(below_zero.end(), higher_zero.begin(), higher_zero.end());
+		arr = below_zero;
+	} else {
+		higher_zero.insert(higher_zero.end(), below_zero.begin(), below_zero.end());
+		arr = higher_zero;
+	}
 }
+
+
+

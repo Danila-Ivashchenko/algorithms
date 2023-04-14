@@ -21,8 +21,11 @@ int main()
     std::vector<int> arr(n);
 
     rand_fill(arr);
-
-    msd_sort(arr);
+	for (auto num : arr) {
+        std::cout << num << ", ";
+    }
+	std::cout << '\n';
+    msd_sort(arr, false);
     for (auto num : arr) {
         std::cout << num << ", ";
     }
