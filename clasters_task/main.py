@@ -1,56 +1,11 @@
 import json
 import shapely
 import math
-import matplotlib.pyplot as plt
-import heapq
 import networkx as nx
-import time
+import matplotlib.pyplot as plt
 
 
-def get_spanning_tree_custom(graph: nx.Graph()) -> nx.Graph():
-    """Spanning tree getting function using heapq"""
-    edges = []
-    tree = nx.Graph()
-    start_node = list(graph.nodes)[0]
-    visited = {start_node, }
-    connected_edges = [(u, v, graph[u][v]["weight"]) for u, v in graph.edges(start_node)]
-    heapq.heapify(connected_edges)
-    while connected_edges:
-        u, v, weight = heapq.heappop(connected_edges)
-        if v not in visited:
-            edges.append((u, v, weight))
-            visited.add(v)
-            for next_u, next_v in graph.edges(v):
-                if next_v not in visited:
-                    heapq.heappush(connected_edges, (next_u, next_v, graph[next_u][next_v]["weight"]))
-    tree.add_weighted_edges_from(edges)
-    return tree
-
-
-def generate_graphdata_fsites(sites: dict, max_distance=400):
-    na_max_dist = 7327
-    edges = []
-    nodes = []
-    for i, site in enumerate(sites[:-1]):
-        nodes.append(site["code"])
-        min_distance = na_max_dist
-        # min_dest = None
-        min_dest_flag = True
-        for dest in sites[i + 1:]:
-            d = get_distance(site, dest)
-            if d <= max_distance:
-                edges.append((site["code"], dest["code"], d))
-                min_dest_flag = False
-            if d < min_distance:
-                # min_dest = dest
-                min_distance = d
-        if min_dest_flag:
-            edges.append((site["code"], dest["code"], min_distance))
-    return edges, nodes
-
-
-def get_clusters(spanning_tree: nx.Graph, n_clusters: int) -> list:
-    """Splits the tree into n_clusters clusters"""
+def get_clusters(spanning_tree: nx.Graph, n_clusters: int):
     sorted_edges = sorted(spanning_tree.edges(data=True), key=lambda x: x[2]['weight'], reverse=True)
     copy_tree = spanning_tree.copy()
     for i in range(n_clusters - 1):
@@ -59,100 +14,99 @@ def get_clusters(spanning_tree: nx.Graph, n_clusters: int) -> list:
     return list(nx.connected_components(copy_tree))
 
 
-def get_distance(site1: dict, site2: dict) -> float:
-    R = 6371
-    """Calculates distance between 2 points by their latitude and longitude using the haversine formula"""
-    loc1 = site1["location"]
-    loc2 = site2["location"]
-    lat1, lat2 = math.radians(loc1["lat"]), math.radians(loc2["lat"])
-    dlat, dlon = math.radians(loc2["lat"] - loc1["lat"]), math.radians(loc2["lon"] - loc1["lon"])
-    a = math.sin(dlat / 2) ** 2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2) ** 2
-    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-    distance = R * c
-    return round(distance, 2)
+def distance(site1, site2):
+    loc1, loc2 = site1["location"], site2["location"]
+    phi1, phi2 = math.radians(loc1["lat"]), math.radians(loc2["lat"])
+    dphi = math.radians(loc2["lat"] - loc1["lat"])
+    dlambda = math.radians(loc2["lon"] - loc1["lon"])
+    a = math.sin(dphi / 2) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(dlambda / 2) ** 2
+    return 6371 * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
 
-def _get_pure_north_america(polygon) -> []:
-    """Finds the largest polygon via vector multiplication. The source data contains not only North America but also Greenland and some ither stuff"""
+def get_edges(sites, max_distance):
+    edges = []
+    for i, site in enumerate(sites[:-1]):
+        dest = get_closest_site(site, sites[i + 1:], max_distance)
+        edges.append((site["code"], dest["code"], distance(site, dest)))
+    return edges
+
+
+def get_closest_site(site, destinations, max_distance):
+    closest_dest = None
+    min_distance = 10 ** 16
+    for dest in destinations:
+        dist = distance(site, dest)
+        if dist <= max_distance and dist < min_distance:
+            closest_dest = dest
+            min_distance = dist
+    if closest_dest is None:
+        closest_dest = destinations[-1]
+    return closest_dest
+
+
+def get_edges_nodes(sites, max_distance=400):
+    nodes = [site["code"] for site in sites]
+    edges = get_edges(sites, max_distance)
+    return edges, nodes
+
+
+def get_data_from_json(filename):
+    with open(filename, "r") as f:
+        return json.load(f)
+
+
+def get_north_america_polygon() -> []:
+    continents = get_data_from_json("jsonfiles/file.json")
+    north_america_polygon = continents["features"][1]["geometry"]["coordinates"]
     max_area = 0
-    max_poly = []
-    for i in range(len(polygon)):
-        points = polygon[i][0]
+    max_polygon = []
+    for i in range(len(north_america_polygon)):
+        points = north_america_polygon[i][0]
         area = shapely.Polygon(points).area
         if area > max_area:
             max_area = area
-            max_poly = points
-    return max_poly
+            max_polygon = points
+    return shapely.Polygon(max_polygon)
 
 
-def get_north_america() -> shapely.Polygon:
-    """Returns Polygon of for  North America"""
-    with open("jsonfiles/file.json", "r") as file:
-        continents = json.load(file)
-        north_america_polygon = continents["features"][1]["geometry"]["coordinates"]
-    return shapely.Polygon(_get_pure_north_america(north_america_polygon))
-
-
-def get_origins():
-    """Parses origins from JSON file """
-    with open("jsonfiles/base.json", "r") as f:
-        sites = json.load(f)
-        lons = []
-        lats = []
-        for site in sites:
-            lons.append(site["location"]["lon"])
-            lats.append(site["location"]["lat"])
-        return lons, lats, sites
-
-
-def get_north_america_sites():
-    """Returns dictionary of North America Sites"""
-    polygon = get_north_america()
+def get_north_america_sites(polygon, sites):
     north_america_sites = []
-    res = 0
-    lons, lats, sites = get_origins()
     for site in sites:
         p = shapely.Point((site["location"]["lon"], site["location"]["lat"]))
         if polygon.contains(p):
-            res += 1
             north_america_sites.append(site)
     return north_america_sites
 
 
-def process_clustering(clusters_amount: int):
-    """Splits North American sites to N clusters"""
-    limiter = 100
-    sites = get_north_america_sites()
-    edges, nodes = generate_graphdata_fsites(sites[:limiter])
-    start = time.time()
+def add_cords(cords: []):
+    plt.scatter(cords[0], cords[1])
+
+
+def draw_map(list_of_cords: []):
+    for cords in list_of_cords:
+        add_cords(cords)
+    plt.show()
+
+def draw_function(list_of_sites: []):
+    cords = []
+    for sites in list_of_sites:
+        lons = [site["location"]["lon"] for site in sites]
+        lats = [site["location"]["lat"] for site in sites]
+        cords += [[lons, lats]]
+    draw_map(cords)
+
+if __name__ == "__main__":
+    sites = get_data_from_json("jsonfiles/base.json")
+
+    north_america_polygon = get_north_america_polygon()
+    north_america_sites = get_north_america_sites(north_america_polygon, sites)
+
+    edges, nodes = get_edges_nodes(north_america_sites)
     graph = nx.Graph()
     graph.add_nodes_from(nodes)
     graph.add_weighted_edges_from(edges)
 
-    spanning_tree = get_spanning_tree_custom(graph)
-    clusters = get_clusters(spanning_tree, clusters_amount)
-    print(len(clusters))
-    end = time.time()
-    print(f"Calculation time: {end - start} for {limiter} sites")
+    num_of_forests = len(get_clusters(graph, 40))
 
-
-def process_file():
-    """Parses points from the file, draws'em all and colors points in North America"""
-    flons = []
-    flats = []
-    for site in north_america_sites:
-        flons.append(site["location"]["lon"])
-        flats.append(site["location"]["lat"])
-    plt.scatter(lons, lats)  # All the points
-    plt.scatter(flons, flats)  # Points in North America
-    plt.show()
-
-
-def main():
-    """The main function"""
-    process_clustering(clusters_amount=40)
-
-
-if __name__ == '__main__':
-    """The main function invocation"""
-    main()
+    print("count of clusters = ", num_of_forests)
+    #draw_function([sites, north_america_sites])
